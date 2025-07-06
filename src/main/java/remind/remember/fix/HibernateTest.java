@@ -16,12 +16,14 @@ public class HibernateTest {
         Session session = sessionFactory.getCurrentSession();
         try {
             session.beginTransaction();
+            PersonH first = new PersonH("Oleg", 2);
+            PersonH second = new PersonH("Dimas", 24);
+            PersonH third = new PersonH("Bob", 12);
 
-            PersonH first = session.get(PersonH.class, 1);
-
-            System.out.println(first.getName());
-            System.out.println(first.getAge());
-
+            session.save(first);
+            session.save(second);
+            session.save(third);
+            
             session.getTransaction().commit();
         } finally {
             sessionFactory.close();
