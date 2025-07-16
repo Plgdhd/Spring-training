@@ -1,6 +1,7 @@
 package remind.remember.fix.config;
 
 import java.sql.DriverManager;
+import java.util.Properties;
 
 import javax.sql.DataSource;
 
@@ -14,13 +15,18 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.orm.hibernate5.HibernateTransactionManager;
+import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 @EnableWebMvc
 @ComponentScan("remind.remember.fix")
-@PropertySource("classpath:database.properties")
+@PropertySource("classpath:hibernate.properties")
+@EnableTransactionManagement // освобождает от явного управления транзакциями
 public class SpringConfig implements WebMvcConfigurer{
     
     private final ApplicationContext applicationContext;
@@ -36,16 +42,41 @@ public class SpringConfig implements WebMvcConfigurer{
     public DataSource dataSource(){
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
 
-        dataSource.setDriverClassName(env.getProperty("driver"));
-        dataSource.setUrl(env.getProperty("url"));
+        dataSource.setDriverClassName(env.getProperty("hibernate.driver_driver"));
+        dataSource.setUrl(env.getProperty("hibernate.connection.url"));
         dataSource.setUsername("postgres");
-        dataSource.setPassword(env.getProperty("password"));
+        dataSource.setPassword(env.getProperty("hibernate.connection.password"));
 
         return dataSource;
     }
 
+    // @Bean
+    // public JdbcTemplate jdbcTemplate(){
+    //     return new JdbcTemplate(dataSource());
+    // }
+
+    private Properties hibernateProperties(){
+        
+        Properties properties = new Properties(); 
+        properties.put("hibernate.dialect", env.getRequiredProperty("hibernate.dialect"));
+        properties.put("hibernate.show_sql", env.getRequiredProperty("hibernate.show_sql"));
+        
+        return properties;
+    }
+
     @Bean
-    public JdbcTemplate jdbcTemplate(){
-        return new JdbcTemplate(dataSource());
+    public LocalSessionFactoryBean sessionFactory(){
+        LocalSessionFactoryBean sessionFactory = new LocalSessionFactoryBean();
+        sessionFactory.setDataSource(dataSource());
+        sessionFactory.setPackagesToScan("remind.remember.fix.models");
+        sessionFactory.setHibernateProperties(hibernateProperties());
+        return sessionFactory;
+    }
+
+    @Bean
+    public PlatformTransactionManager hibernateTransactionManager(){
+        HibernateTransactionManager transactionManager = new HibernateTransactionManager();
+        transactionManager.setSessionFactory(sessionFactory().getObject());
+        return transactionManager;
     }
 }
